@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { z } from "zod";
+import { z, ZodError } from "zod";
 
 const urlSchema = z.object({
   url: z.string().url("有効なURLを入力してください"),
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await supabase
       .from("urls")
-      .insert({ url })
+      .insert({ url } as any)
       .select()
       .single();
 
@@ -33,9 +33,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("URL追加エラー:", error);
 
-    if (error instanceof z.ZodError) {
+    if (error instanceof ZodError) {
       return NextResponse.json(
-        { error: { code: "VALIDATION_ERROR", message: error.errors[0].message } },
+        { error: { code: "VALIDATION_ERROR", message: (error as any).errors[0].message } },
         { status: 400 }
       );
     }

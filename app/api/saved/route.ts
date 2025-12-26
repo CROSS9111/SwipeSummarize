@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { z } from "zod";
+import { z, ZodError } from "zod";
 
 const saveSchema = z.object({
   url_id: z.string().uuid(),
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
         summary: validatedData.summary,
         original_url: validatedData.original_url,
         tags: validatedData.tags,
-      })
+      } as any)
       .select()
       .single();
 
@@ -45,9 +45,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("要約保存エラー:", error);
 
-    if (error instanceof z.ZodError) {
+    if (error instanceof ZodError) {
       return NextResponse.json(
-        { error: { code: "VALIDATION_ERROR", message: error.errors[0].message } },
+        { error: { code: "VALIDATION_ERROR", message: (error as any).errors[0].message } },
         { status: 400 }
       );
     }

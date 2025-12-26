@@ -23,7 +23,7 @@ export async function GET() {
     }
 
     // ランダムに選択
-    const randomUrl = urls[Math.floor(Math.random() * urls.length)];
+    const randomUrl = urls[Math.floor(Math.random() * urls.length)] as any;
 
     try {
       // 記事コンテンツを取得
