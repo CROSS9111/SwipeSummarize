@@ -14,6 +14,15 @@
         "/Users/kurosuhirotoshi/dev/my_personal_project/swipe_summarize"
       ],
       "env": {}
+    },
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--access-token",
+        "sbp_7e966644ca2155d262e82d6cd87a377d2357b73e"
+      ]
     }
   }
 }
