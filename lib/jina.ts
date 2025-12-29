@@ -14,7 +14,9 @@ export async function fetchArticleContent(url: string): Promise<JinaResponse> {
     throw new Error(`Jina API error: ${response.status}`);
   }
 
-  const data = await response.json();
+  const json = await response.json();
+  const data = json.data || {};
+
   return {
     title: data.title || "タイトルなし",
     content: data.content || "",
