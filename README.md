@@ -418,14 +418,18 @@ export async function fetchArticleContent(url: string) {
     throw new Error(`Jina API error: ${response.status}`);
   }
 
-  const data = await response.json();
+  const json = await response.json();
+  const data = json.data || {};
   return {
-    title: data.title,
-    content: data.content,
-    url: data.url,
+    title: data.title || "タイトルなし",
+    content: data.content || "",
+    url: data.url || url,
   };
 }
 ```
+
+> [!IMPORTANT]
+> Jina Reader API を `application/json` で取得する場合、結果は `data` プロパティ内にネストされます。
 
 **レート制限:**
 
@@ -506,7 +510,7 @@ ${content.slice(0, 10000)}  // トークン制限対策
 - [x] Supabase プロジェクト作成・テーブル作成
 - [x] URL 追加 API
 - [x] ランダム取得 + 要約 API
-- [x] API基盤完成（全エンドポイント実装済み）
+- [x] API 基盤完成（全エンドポイント実装済み）
 - [x] 基本 UI（URL 入力、カード表示、3 ボタン）
 
 ### Phase 2: 基本機能完成（1 週間）
@@ -693,7 +697,19 @@ npx shadcn@latest add button card input badge dialog sonner skeleton dropdown-me
 
 **components.json** が生成され、`components/ui/` に各コンポーネントが追加されます。
 
-### 13.3 Supabase セットアップ
+### 13.3 テストの実行
+
+ユーザールールの「すべての関数にユニットテストを作成する」に基づき、Vitest を導入しています。
+
+```bash
+# テストの実行
+npm test
+
+# カバレッジの確認（将来用）
+# npm run test:coverage
+```
+
+### 13.4 Supabase セットアップ
 
 1. [Supabase](https://supabase.com) でアカウント作成
 2. 新規プロジェクト作成
@@ -701,7 +717,7 @@ npx shadcn@latest add button card input badge dialog sonner skeleton dropdown-me
 4. Project Settings > API から URL と anon key を取得
 5. `.env.local` に設定
 
-### 13.4 Gemini API セットアップ
+### 13.5 Gemini API セットアップ
 
 1. [Google AI Studio](https://aistudio.google.com/) で API キー取得
 2. `.env.local` に `GEMINI_API_KEY` を設定

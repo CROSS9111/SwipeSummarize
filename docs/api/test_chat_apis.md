@@ -1,7 +1,7 @@
 # LLMテストチャット API仕様書
 
 **機能ID**: F-005-TEST-CHAT
-**最終更新**: 2024-12-30
+**最終更新**: 2024-12-30（コード分析により詳細更新）
 **実装ステータス**: 完了
 
 ---
@@ -96,14 +96,40 @@ Content-Type: application/json
 }
 ```
 
-#### エラーコード
+#### エラーコード詳細
 
-| HTTPステータス | エラー内容 | 原因 |
-|---------------|-----------|------|
-| 400 | パラメータ不足 | 必須フィールドが未入力 |
-| 400 | 不正なプロバイダー | サポートされていないプロバイダー |
-| 404 | 機能制限 | 本番環境でのアクセス |
-| 500 | サーバーエラー | 内部処理エラー |
+| HTTPステータス | エラーメッセージ | 原因 | 対処法 |
+|---------------|----------------|------|--------|
+| 400 | "プロバイダーとモデルは必須です" | 必須パラメータ不足 | providerとmodelを指定 |
+| 400 | "APIキーが必要です" | APIキー未指定 | 有効なAPIキーを入力 |
+| 400 | "Azure OpenAIには APIキー、エンドポイント、デプロイメント名、APIバージョンが必要です" | Azure設定不足 | 全必須フィールドを入力 |
+| 400 | "AWS Bedrockには リージョン、アクセスキーID、シークレットアクセスキーが必要です" | AWS認証情報不足 | AWS認証情報を正しく入力 |
+| 400 | "Vertex AIには プロジェクトIDとロケーションが必要です" | GCP設定不足 | プロジェクトIDとロケーションを入力 |
+| 400 | "サポートされていないプロバイダーです" | 不正なプロバイダー | 対応プロバイダーを選択 |
+| 404 | "This feature is only available in development" | 本番環境でのアクセス | NODE_ENV=developmentで実行 |
+| 500 | "サーバーエラーが発生しました" | 内部処理エラー | サーバーログを確認 |
+
+#### プロバイダー固有のエラー
+
+**OpenAI/Anthropic/Google**:
+- 401: Invalid API key - APIキーが無効
+- 429: Rate limited - レート制限超過
+- 400: Invalid model - モデル名が不正
+
+**Azure OpenAI**:
+- 401: Unauthorized - APIキーまたはエンドポイントが無効
+- 404: Deployment not found - デプロイメント名が不正
+- 400: Invalid API version - APIバージョンがサポート外
+
+**AWS Bedrock**:
+- 403: Access denied - IAM権限不足
+- 400: Invalid region - リージョン指定が不正
+- 400: Model not accessible - モデルへのアクセス権限なし
+
+**Vertex AI**:
+- 403: Permission denied - GCP権限不足
+- 404: Project not found - プロジェクトIDが不正
+- 400: Invalid location - ロケーション指定が不正
 
 ---
 
@@ -119,6 +145,17 @@ Content-Type: application/json
 - データベースへの保存なし
 - llm_usageテーブルへの記録なし
 - セッション終了時に認証情報は破棄
+
+---
+
+## テストプロンプト仕様
+
+**固定プロンプト**: "Hello! Please introduce yourself and explain your capabilities in 2-3 sentences."
+
+**使用方法**:
+- プロンプトは固定でカスタマイズ不可
+- LLMClient.summarize()メソッドを使用
+- タイトルは"Test Request"で固定
 
 ---
 
