@@ -7,13 +7,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, ExternalLink, Calendar, Tag } from "lucide-react";
 import { SavedRecord } from "@/types";
 import { toast } from "sonner";
+import { DeleteButton } from "@/components/saved/DeleteButton";
+import { ConfirmDeleteDialog } from "@/components/saved/ConfirmDeleteDialog";
+import { BatchSelectControl } from "@/components/saved/BatchSelectControl";
 
 export default function SavedPage() {
   const [savedItems, setSavedItems] = useState<SavedRecord[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    type: "single" | "batch" | "all";
+    ids?: string[];
+    title?: string;
+  } | null>(null);
 
   useEffect(() => {
     fetchSavedItems();
@@ -45,6 +57,119 @@ export default function SavedPage() {
     });
   };
 
+  // 選択状態の管理
+  const handleSelectItem = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = () => {
+    setSelectedIds(savedItems.map((item) => item.id));
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedIds([]);
+  };
+
+  // 削除モーダルを開く
+  const openDeleteModal = (
+    type: "single" | "batch" | "all",
+    ids?: string[],
+    title?: string
+  ) => {
+    setDeleteTarget({ type, ids, title });
+    setDeleteModalOpen(true);
+  };
+
+  // 削除処理を実行
+  const executeDeletion = async () => {
+    if (!deleteTarget) return;
+
+    setIsDeleting(true);
+    try {
+      let response: Response;
+
+      switch (deleteTarget.type) {
+        case "single":
+          if (!deleteTarget.ids || deleteTarget.ids.length === 0) return;
+          response = await fetch(`/api/delete/${deleteTarget.ids[0]}`, {
+            method: "DELETE",
+          });
+          break;
+
+        case "batch":
+          if (!deleteTarget.ids || deleteTarget.ids.length === 0) return;
+          response = await fetch("/api/delete/batch", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ids: deleteTarget.ids }),
+          });
+          break;
+
+        case "all":
+          response = await fetch("/api/delete/all", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ confirm: true }),
+          });
+          break;
+
+        default:
+          return;
+      }
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || "削除に失敗しました");
+      }
+
+      // 成功時の処理
+      const result = await response.json();
+      const count = result.deletedCount || 1;
+      toast.success(
+        deleteTarget.type === "single"
+          ? "記事が削除されました"
+          : `${count}件の記事が削除されました`
+      );
+
+      // UIを更新
+      setSelectedIds([]);
+      setDeleteModalOpen(false);
+      setDeleteTarget(null);
+      await fetchSavedItems(); // リストを再取得
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "削除に失敗しました");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // 削除確認メッセージを生成
+  const getDeleteMessage = () => {
+    if (!deleteTarget) return { title: "", message: "" };
+
+    switch (deleteTarget.type) {
+      case "single":
+        return {
+          title: "記事を削除しますか？",
+          message: `「${deleteTarget.title}」を削除します。この操作は取り消せません。`,
+        };
+      case "batch":
+        return {
+          title: "選択した記事を削除しますか？",
+          message: `${deleteTarget.ids?.length}件の記事を削除します。この操作は取り消せません。`,
+        };
+      case "all":
+        return {
+          title: "全ての記事を削除しますか？",
+          message: `保存済みの全ての記事（${savedItems.length}件）が削除されます。この操作は取り消せません。`,
+        };
+      default:
+        return { title: "", message: "" };
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       {/* ヘッダー */}
@@ -64,6 +189,21 @@ export default function SavedPage() {
           </Link>
         </div>
       </header>
+
+      {/* 一括選択コントロール */}
+      {!isLoading && savedItems.length > 0 && (
+        <BatchSelectControl
+          selectedCount={selectedIds.length}
+          totalCount={savedItems.length}
+          onSelectAll={handleSelectAll}
+          onDeselectAll={handleDeselectAll}
+          onDeleteSelected={() =>
+            openDeleteModal("batch", selectedIds)
+          }
+          onDeleteAll={() => openDeleteModal("all")}
+          disabled={isDeleting}
+        />
+      )}
 
       {/* コンテンツ */}
       <div>
@@ -97,8 +237,24 @@ export default function SavedPage() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {savedItems.map((item) => (
-              <Card key={item.id} className="flex flex-col h-full">
-                <CardHeader>
+              <Card key={item.id} className="flex flex-col h-full relative">
+                {/* チェックボックスと削除ボタン */}
+                <div className="absolute top-2 right-2 flex items-center gap-2">
+                  <Checkbox
+                    checked={selectedIds.includes(item.id)}
+                    onCheckedChange={() => handleSelectItem(item.id)}
+                    aria-label={`${item.title}を選択`}
+                  />
+                  <DeleteButton
+                    id={item.id}
+                    onDelete={(id) =>
+                      openDeleteModal("single", [id], item.title)
+                    }
+                    disabled={isDeleting}
+                  />
+                </div>
+
+                <CardHeader className="pr-24">
                   <CardTitle className="text-lg line-clamp-2">
                     {item.title}
                   </CardTitle>
@@ -138,6 +294,16 @@ export default function SavedPage() {
           </div>
         )}
       </div>
+
+      {/* 削除確認ダイアログ */}
+      <ConfirmDeleteDialog
+        open={deleteModalOpen}
+        onOpenChange={setDeleteModalOpen}
+        title={getDeleteMessage().title}
+        message={getDeleteMessage().message}
+        onConfirm={executeDeletion}
+        loading={isDeleting}
+      />
     </div>
   );
 }
