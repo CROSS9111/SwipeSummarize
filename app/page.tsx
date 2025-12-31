@@ -6,6 +6,7 @@ import { UrlInput } from "@/components/UrlInput";
 import { SummaryCard } from "@/components/SummaryCard";
 import { ActionButtons } from "@/components/ActionButtons";
 import { SwipeableCard } from "@/components/SwipeableCard";
+import { WaitingList } from "@/components/WaitingList";
 import { Button } from "@/components/ui/button";
 import { SummaryWithUrl } from "@/types";
 import { toast } from "sonner";
@@ -15,6 +16,7 @@ export default function Home() {
   const [summary, setSummary] = useState<SummaryWithUrl | undefined>();
   const [isLoading, setIsLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const fetchRandomSummary = async () => {
     setIsLoading(true);
@@ -66,6 +68,7 @@ export default function Home() {
 
       toast.success("記事を保存しました");
       await fetchRandomSummary();
+      setRefreshTrigger(prev => prev + 1);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "エラーが発生しました");
     } finally {
@@ -89,6 +92,7 @@ export default function Home() {
 
       toast.success("記事を削除しました");
       await fetchRandomSummary();
+      setRefreshTrigger(prev => prev + 1);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "エラーが発生しました");
     } finally {
@@ -126,7 +130,10 @@ export default function Home() {
 
         {/* URL入力フォーム */}
         <div className="mb-6">
-          <UrlInput onUrlAdded={fetchRandomSummary} />
+          <UrlInput onUrlAdded={() => {
+            fetchRandomSummary();
+            setRefreshTrigger(prev => prev + 1);
+          }} />
         </div>
       </header>
 
@@ -153,6 +160,11 @@ export default function Home() {
           disabled={!summary || isLoading}
           className="mt-6"
         />
+      </div>
+
+      {/* Waiting List */}
+      <div className="mt-8">
+        <WaitingList refreshTrigger={refreshTrigger} />
       </div>
     </div>
   );
