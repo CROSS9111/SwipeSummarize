@@ -27,6 +27,7 @@
 | URL 登録       | URL を入力してウェイティングリストに追加    | P0     |
 | ランダム表示   | ウェイティングリストからランダムに 1 件選択 | P0     |
 | AI 要約        | 選択された記事を AI で要約して表示          | P0     |
+| AI タグ生成    | 記事の内容から関連タグを自動生成            | P0     |
 | 3 択アクション | とっとく / すてる / もう一度                | P0     |
 | 保存済みリスト | 「とっとく」した要約の一覧表示              | P0     |
 
@@ -34,7 +35,7 @@
 
 | 機能               | 説明                                | 優先度 |
 | ------------------ | ----------------------------------- | ------ |
-| タグ付け           | 保存した記事にタグを追加            | P1     |
+| 手動タグ編集       | 自動生成されたタグを手動で編集      | P1     |
 | 検索               | 保存済み記事の検索                  | P1     |
 | エクスポート       | 保存済み記事を Markdown/JSON で出力 | P2     |
 | ブックマークレット | ブラウザから 1 クリックで URL 追加  | P2     |
@@ -123,7 +124,7 @@ flowchart TD
 | サービス              | 用途                   | 料金                       |
 | --------------------- | ---------------------- | -------------------------- |
 | **Jina Reader API**   | URL からコンテンツ抽出 | 無料枠: 1000 万トークン    |
-| **Google Gemini API** | テキスト要約           | 無料枠: 1500 リクエスト/日 |
+| **Google Gemini API** | テキスト要約・タグ生成 | 無料枠: 1500 リクエスト/日 |
 | (代替) Claude API     | テキスト要約           | 従量課金                   |
 
 ### 3.5 インフラ
@@ -183,7 +184,7 @@ URL をウェイティングリストに追加
 
 #### GET /api/urls/random
 
-ランダムに 1 件取得し、AI 要約を生成
+ランダムに 1 件取得し、AI 要約とタグを生成
 
 **Response:**
 
@@ -193,6 +194,7 @@ URL をウェイティングリストに追加
   "url": "https://example.com/article",
   "title": "記事タイトル",
   "summary": "AIによる要約テキスト...",
+  "tags": ["React", "TypeScript", "Next.js", "Performance"],
   "original_length": 5000,
   "created_at": "2025-12-26T10:00:00Z"
 }
@@ -225,6 +227,7 @@ erDiagram
     urls {
         UUID id PK
         TEXT url UK
+        TEXT[] tags
         TIMESTAMP created_at
         TIMESTAMP updated_at
     }
@@ -234,7 +237,7 @@ erDiagram
         TEXT title
         TEXT summary
         TEXT original_url
-        JSONB tags
+        TEXT[] tags
         TIMESTAMP created_at
         TIMESTAMP updated_at
     }
@@ -247,6 +250,7 @@ erDiagram
 CREATE TABLE urls (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   url TEXT NOT NULL UNIQUE,
+  tags TEXT[] DEFAULT '{}',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -257,7 +261,7 @@ CREATE TABLE saved (
   title TEXT NOT NULL,
   summary TEXT NOT NULL,
   original_url TEXT NOT NULL,
-  tags JSONB DEFAULT '[]'::jsonb,
+  tags TEXT[] DEFAULT '{}',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -283,6 +287,7 @@ CREATE TRIGGER update_saved_updated_at
 
 -- インデックス
 CREATE INDEX idx_urls_created_at ON urls(created_at DESC);
+CREATE INDEX idx_urls_tags ON urls USING GIN(tags);
 CREATE INDEX idx_saved_created_at ON saved(created_at DESC);
 CREATE INDEX idx_saved_tags ON saved USING GIN(tags);
 ```

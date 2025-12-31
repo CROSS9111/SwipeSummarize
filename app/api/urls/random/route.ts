@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { fetchArticleContent } from "@/lib/jina";
-import { summarizeContent } from "@/lib/gemini";
+import { summarizeContentWithTags } from "@/lib/gemini";
 
 export async function GET() {
   try {
@@ -29,14 +29,15 @@ export async function GET() {
       // 記事コンテンツを取得
       const article = await fetchArticleContent(randomUrl.url);
 
-      // AI要約を生成
-      const summary = await summarizeContent(article.title, article.content);
+      // AI要約とタグを生成
+      const { summary, tags } = await summarizeContentWithTags(article.title, article.content);
 
       const result = {
         id: randomUrl.id,
         url: randomUrl.url,
         title: article.title,
         summary,
+        tags,
         original_length: article.content.length,
         created_at: randomUrl.created_at,
       };

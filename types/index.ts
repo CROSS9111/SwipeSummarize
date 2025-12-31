@@ -20,6 +20,7 @@ export interface SummaryWithUrl {
   url: string;
   title: string;
   summary: string;
+  tags: string[];
   original_length: number;
   created_at: string;
 }

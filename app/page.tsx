@@ -55,7 +55,7 @@ export default function Home() {
           title: summary.title,
           summary: summary.summary,
           original_url: summary.url,
-          tags: [],
+          tags: summary.tags || [],
         }),
       });
 

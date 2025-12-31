@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { LinkIcon, FileText, Clock } from "lucide-react";
+import { LinkIcon, FileText, Clock, Tag } from "lucide-react";
 import { SummaryWithUrl } from "@/types";
 
 interface SummaryCardProps {
@@ -83,6 +83,16 @@ export function SummaryCard({ summary, isLoading }: SummaryCardProps) {
           <p className="text-base leading-relaxed whitespace-pre-wrap">
             {summary.summary}
           </p>
+          {summary.tags && summary.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
+              {summary.tags.map((tag, index) => (
+                <Badge key={index} variant="outline" className="text-xs">
+                  <Tag className="h-3 w-3 mr-1" />
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          )}
         </ScrollArea>
       </CardContent>
     </Card>
