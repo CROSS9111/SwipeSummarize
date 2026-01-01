@@ -14,9 +14,11 @@ import { toast } from "sonner";
 import { DeleteButton } from "@/components/saved/DeleteButton";
 import { ConfirmDeleteDialog } from "@/components/saved/ConfirmDeleteDialog";
 import { BatchSelectControl } from "@/components/saved/BatchSelectControl";
+import { TagSidebar } from "@/components/saved/TagSidebar";
 
 export default function SavedPage() {
   const [savedItems, setSavedItems] = useState<SavedRecord[]>([]);
+  const [filteredItems, setFilteredItems] = useState<SavedRecord[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -30,6 +32,15 @@ export default function SavedPage() {
   useEffect(() => {
     fetchSavedItems();
   }, []);
+
+  useEffect(() => {
+    setFilteredItems(savedItems);
+  }, [savedItems]);
+
+  const handleItemsFiltered = (items: SavedRecord[]) => {
+    setFilteredItems(items);
+    setSelectedIds([]);
+  };
 
   const fetchSavedItems = async () => {
     setIsLoading(true);
@@ -97,7 +108,7 @@ export default function SavedPage() {
   };
 
   const handleSelectAll = () => {
-    setSelectedIds(savedItems.map((item) => item.id));
+    setSelectedIds(filteredItems.map((item) => item.id));
   };
 
   const handleDeselectAll = () => {
@@ -203,72 +214,98 @@ export default function SavedPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
-      {/* ヘッダー */}
-      <header className="mb-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">保存済みの記事</h1>
-            <p className="text-muted-foreground">
-              とっとくした記事の要約一覧
-            </p>
-          </div>
-          <Link href="/">
-            <Button variant="outline">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              ホームに戻る
-            </Button>
-          </Link>
-        </div>
-      </header>
-
-      {/* 一括選択コントロール */}
+    <div className="flex h-screen overflow-hidden">
+      {/* タグサイドバー - デスクトップのみ */}
       {!isLoading && savedItems.length > 0 && (
-        <BatchSelectControl
-          selectedCount={selectedIds.length}
-          totalCount={savedItems.length}
-          onSelectAll={handleSelectAll}
-          onDeselectAll={handleDeselectAll}
-          onDeleteSelected={() =>
-            openDeleteModal("batch", selectedIds)
-          }
-          onDeleteAll={() => openDeleteModal("all")}
-          disabled={isDeleting}
-        />
+        <div className="hidden lg:block">
+          <TagSidebar
+            savedItems={savedItems}
+            onItemsFiltered={handleItemsFiltered}
+          />
+        </div>
       )}
 
-      {/* コンテンツ */}
-      <div>
-        {isLoading ? (
-          <div className="grid gap-4 md:grid-cols-2">
-            {[...Array(4)].map((_, i) => (
-              <Card key={i}>
-                <CardHeader>
-                  <Skeleton className="h-6 w-3/4" />
-                  <Skeleton className="h-4 w-1/2 mt-2" />
-                </CardHeader>
+      {/* メインコンテンツ */}
+      <div className="flex-1 overflow-auto">
+        <div className="container mx-auto px-4 py-8 max-w-6xl">
+          {/* ヘッダー */}
+          <header className="mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-3xl font-bold mb-2">保存済みの記事</h1>
+                <p className="text-muted-foreground">
+                  とっとくした記事の要約一覧
+                  {filteredItems.length !== savedItems.length && (
+                    <span className="ml-2">
+                      ({filteredItems.length}/{savedItems.length}件表示)
+                    </span>
+                  )}
+                </p>
+              </div>
+              <Link href="/">
+                <Button variant="outline">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  ホームに戻る
+                </Button>
+              </Link>
+            </div>
+          </header>
+
+          {/* 一括選択コントロール */}
+          {!isLoading && filteredItems.length > 0 && (
+            <BatchSelectControl
+              selectedCount={selectedIds.length}
+              totalCount={filteredItems.length}
+              onSelectAll={handleSelectAll}
+              onDeselectAll={handleDeselectAll}
+              onDeleteSelected={() =>
+                openDeleteModal("batch", selectedIds)
+              }
+              onDeleteAll={() => openDeleteModal("all")}
+              disabled={isDeleting}
+            />
+          )}
+
+          {/* コンテンツ */}
+          <div>
+            {isLoading ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {[...Array(4)].map((_, i) => (
+                  <Card key={i}>
+                    <CardHeader>
+                      <Skeleton className="h-6 w-3/4" />
+                      <Skeleton className="h-4 w-1/2 mt-2" />
+                    </CardHeader>
+                    <CardContent>
+                      <Skeleton className="h-4 w-full mb-2" />
+                      <Skeleton className="h-4 w-full mb-2" />
+                      <Skeleton className="h-4 w-3/4" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : savedItems.length === 0 ? (
+              <Card className="text-center py-12">
                 <CardContent>
-                  <Skeleton className="h-4 w-full mb-2" />
-                  <Skeleton className="h-4 w-full mb-2" />
-                  <Skeleton className="h-4 w-3/4" />
+                  <p className="text-muted-foreground mb-4">
+                    まだ保存済みの記事がありません
+                  </p>
+                  <Link href="/">
+                    <Button>記事を仕分ける</Button>
+                  </Link>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        ) : savedItems.length === 0 ? (
-          <Card className="text-center py-12">
-            <CardContent>
-              <p className="text-muted-foreground mb-4">
-                まだ保存済みの記事がありません
-              </p>
-              <Link href="/">
-                <Button>記事を仕分ける</Button>
-              </Link>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2">
-            {savedItems.map((item) => {
+            ) : filteredItems.length === 0 ? (
+              <Card className="text-center py-12">
+                <CardContent>
+                  <p className="text-muted-foreground mb-4">
+                    選択したタグに該当する記事がありません
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {filteredItems.map((item) => {
               const { summaryText, tags } = parseSummaryData(item);
               return (
                 <Card key={item.id} className="flex flex-col h-full relative">
@@ -325,9 +362,11 @@ export default function SavedPage() {
                   </CardContent>
                 </Card>
               );
-            })}
+                })}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* 削除確認ダイアログ */}

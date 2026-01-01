@@ -3,9 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
 
 const allDeleteSchema = z.object({
-  confirm: z.literal(true, {
-    errorMap: () => ({ message: "全削除には confirm: true が必要です" }),
-  }),
+  confirm: z.literal(true, "全削除には confirm: true が必要です"),
 });
 
 export async function POST(request: NextRequest) {
@@ -79,7 +77,7 @@ export async function POST(request: NextRequest) {
         {
           error: {
             code: "CONFIRMATION_REQUIRED",
-            message: error.errors[0].message,
+            message: error.issues[0].message,
           },
         },
         { status: 400 }

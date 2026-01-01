@@ -39,3 +39,26 @@ export interface JinaResponse {
   content: string;
   url: string;
 }
+
+// タグサイドバー機能用の型定義
+export interface TagWithCount {
+  tag: string;
+  count: number;
+}
+
+export interface SanitizedTag {
+  tag: string;
+  count: number;
+  isSelected: boolean;
+}
+
+export interface TagsResponse {
+  tags: TagWithCount[];
+}
+
+export interface TagFilterState {
+  selectedTags: string[];
+  filteredItems: SavedRecord[];
+  isLoading: boolean;
+  error: string | null;
+}

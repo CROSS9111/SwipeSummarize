@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     }
 
     const deletedCount = data?.length || 0;
-    const deletedIds = data?.map((item) => item.id) || [];
+    const deletedIds = data?.map((item: any) => item.id) || [];
 
     return NextResponse.json({
       deletedCount,
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
         {
           error: {
             code: "VALIDATION_ERROR",
-            message: error.errors[0].message,
+            message: error.issues[0].message,
           },
         },
         { status: 400 }
