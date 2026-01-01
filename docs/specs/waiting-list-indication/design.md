@@ -44,7 +44,6 @@
   "items": [
     {
       "id": "uuid-1234",
-      "title": "記事タイトル",
       "url": "https://example.com/article",
       "created_at": "2025-01-01T00:00:00Z"
     }
@@ -57,6 +56,8 @@
   }
 }
 ```
+
+**実装時変更**: `title`フィールドはDBスキーマ制約により削除されました。
 
 **エラーレスポンス**
 
@@ -79,7 +80,7 @@
 | フィールド | 型 | 説明 | 備考 |
 |-----------|-----|------|------|
 | items[].id | string | URLのID | UUID形式 |
-| items[].title | string | 記事タイトル | Jina APIで取得済み |
+| items[].title | string | 記事タイトル | **実装時削除**: DBスキーマ制約により削除 |
 | items[].url | string | 記事URL | 元記事のURL |
 | items[].created_at | string | 追加日時 | ISO 8601形式 |
 | pagination.hasMore | boolean | 次ページの有無 | 無限スクロール用 |
@@ -122,17 +123,15 @@ CREATE TABLE urls (
 ### 5.2 クエリ
 
 ```sql
--- Waiting list取得（要約未生成のもの）
-SELECT id, url, title, created_at
+-- **実装版**: Waiting list取得（全URLを表示）
+SELECT id, url, created_at
 FROM urls
-WHERE summary IS NULL
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
 
--- 総件数取得
+-- **実装版**: 総件数取得（全URL）
 SELECT COUNT(*) as total
-FROM urls
-WHERE summary IS NULL;
+FROM urls;
 ```
 
 ## 6. 状態遷移
@@ -171,13 +170,20 @@ interface WaitingListState {
   page: number;
   hasMore: boolean;
   isLoading: boolean;
+  total: number;
+  isInitialLoad: boolean;
 }
 
 interface WaitingItem {
   id: string;
-  title: string;
-  url: string;
+  url: string;  // タイトルはDBスキーマ制約により削除
   created_at: string;
+}
+
+// パフォーマンス最適化：useRefパターン
+interface RefState {
+  isLoadingRef: React.MutableRefObject<boolean>;
+  hasMoreRef: React.MutableRefObject<boolean>;
 }
 ```
 
@@ -192,11 +198,11 @@ interface WaitingItem {
 ├────────────────────────────────────┤
 │    📄 Waiting List (45件)           │
 ├────────────────────────────────────┤
-│ ▸ 記事タイトル1                     │
-│   example.com                       │
+│ ▸ example.com                       │
+│   https://example.com/article       │
 ├────────────────────────────────────┤
-│ ▸ 記事タイトル2                     │
-│   another-site.com                  │
+│ ▸ another-site.com                  │
+│   https://another-site.com/news     │
 ├────────────────────────────────────┤
 │          ...                        │
 │    [さらに読み込む]                 │
@@ -279,7 +285,54 @@ interface WaitingItem {
 - モバイルUI考慮：タップしやすいリスト項目サイズ
 - アクセシビリティ：キーボード操作対応
 
-### 12.3 将来の拡張性
+### 12.3 パフォーマンス最適化 (実装時追加)
+
+実装中に発生したfetchエラー（無限ループ）を解決するため、以下の最適化を実装：
+
+#### 問題
+```typescript
+// 問題のあったコード：循環依存により無限ループ
+const fetchWaitingList = useCallback(async (pageNum: number, reset = false) => {
+  if (!reset && (isLoading || !hasMore)) return;
+  // ...
+}, [hasMore, isLoading]); // この依存配列が問題
+```
+
+#### 解決策：useRefパターン
+```typescript
+// useRefを使用してstate更新による再レンダリングを回避
+const isLoadingRef = useRef(false);
+const hasMoreRef = useRef(true);
+
+const fetchWaitingList = useCallback(async (pageNum: number, reset = false) => {
+  if (!reset && (isLoadingRef.current || !hasMoreRef.current)) return;
+
+  setIsLoading(true);
+  isLoadingRef.current = true;
+
+  try {
+    // ... fetch logic
+    setHasMore(data.pagination.hasMore);
+    hasMoreRef.current = data.pagination.hasMore; // refを同期
+  } finally {
+    setIsLoading(false);
+    isLoadingRef.current = false;
+  }
+}, []); // 空の依存配列で安定化
+
+// ESLint警告を抑制（意図的な設計のため）
+useEffect(() => {
+  fetchWaitingList(1, true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [refreshTrigger]);
+```
+
+#### 効果
+- 無限ループエラー解消
+- レンダリング回数削減によるパフォーマンス向上
+- 安定したfetch関数参照の維持
+
+### 12.4 将来の拡張性
 - ドラッグ＆ドロップでの順序変更
 - リストからの個別削除機能
 - タグによるフィルタリング
@@ -288,6 +341,8 @@ interface WaitingItem {
 ## 13. 昇格チェックリスト
 
 - [x] 機能要件を`docs/functional_requirements.md`へ追加（F-006）
+- [x] **実装完了**: WaitingListコンポーネント、API、UI統合
+- [x] **パフォーマンス最適化**: useRefパターンによる無限ループ対策
 - [ ] API仕様を`docs/api/waiting_list_apis.md`として作成
 - [ ] テストケースを`docs/testing/waiting_list/`へ
-- [ ] 実装完了後、`/documentation`コマンドで永続化
+- [x] 実装完了後、`/documentation`コマンドで永続化

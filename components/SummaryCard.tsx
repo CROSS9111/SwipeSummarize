@@ -13,6 +13,40 @@ interface SummaryCardProps {
 }
 
 export function SummaryCard({ summary, isLoading }: SummaryCardProps) {
+  // Parse summary and tags if they are in JSON format
+  const parseSummaryData = (summary: SummaryWithUrl) => {
+    let summaryText = summary.summary;
+    let tags = summary.tags || [];
+
+    // Check if summary is a JSON string
+    if (summary.summary && summary.summary.includes('```json')) {
+      try {
+        // Extract JSON from markdown code block
+        const jsonMatch = summary.summary.match(/```json\n([\s\S]*?)\n```/);
+        if (jsonMatch && jsonMatch[1]) {
+          const parsed = JSON.parse(jsonMatch[1]);
+          summaryText = parsed.summary || summary.summary;
+          tags = parsed.tags || tags;
+        }
+      } catch (e) {
+        // If parsing fails, use the original text
+        console.error("Failed to parse summary JSON:", e);
+      }
+    } else if (summary.summary && summary.summary.startsWith('{')) {
+      try {
+        // Try direct JSON parse
+        const parsed = JSON.parse(summary.summary);
+        summaryText = parsed.summary || summary.summary;
+        tags = parsed.tags || tags;
+      } catch (e) {
+        // If parsing fails, use the original text
+        console.error("Failed to parse summary JSON:", e);
+      }
+    }
+
+    return { summaryText, tags };
+  };
+
   if (isLoading) {
     return (
       <Card className="w-full max-w-2xl h-[500px]">
@@ -40,6 +74,8 @@ export function SummaryCard({ summary, isLoading }: SummaryCardProps) {
       </Card>
     );
   }
+
+  const { summaryText, tags } = parseSummaryData(summary);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("ja-JP", {
@@ -81,11 +117,11 @@ export function SummaryCard({ summary, isLoading }: SummaryCardProps) {
         </div>
         <ScrollArea className="h-[300px] pr-4">
           <p className="text-base leading-relaxed whitespace-pre-wrap">
-            {summary.summary}
+            {summaryText}
           </p>
-          {summary.tags && summary.tags.length > 0 && (
+          {tags && tags.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
-              {summary.tags.map((tag, index) => (
+              {tags.map((tag, index) => (
                 <Badge key={index} variant="outline" className="text-xs">
                   <Tag className="h-3 w-3 mr-1" />
                   {tag}

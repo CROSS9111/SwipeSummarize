@@ -26,10 +26,15 @@ export function WaitingList({ refreshTrigger }: WaitingListProps) {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const observerTarget = useRef<HTMLDivElement>(null);
 
+  // Use refs to track state without causing re-renders
+  const isLoadingRef = useRef(false);
+  const hasMoreRef = useRef(true);
+
   const fetchWaitingList = useCallback(async (pageNum: number, reset = false) => {
-    if (!reset && (isLoading || !hasMore)) return;
+    if (!reset && (isLoadingRef.current || !hasMoreRef.current)) return;
 
     setIsLoading(true);
+    isLoadingRef.current = true;
     try {
       const response = await fetch(`/api/urls/waiting-list?page=${pageNum}&limit=20`);
 
@@ -41,6 +46,7 @@ export function WaitingList({ refreshTrigger }: WaitingListProps) {
 
       setItems(prev => reset ? data.items : [...prev, ...data.items]);
       setHasMore(data.pagination.hasMore);
+      hasMoreRef.current = data.pagination.hasMore;
       setTotal(data.pagination.total);
       setPage(pageNum);
 
@@ -54,13 +60,15 @@ export function WaitingList({ refreshTrigger }: WaitingListProps) {
       }
     } finally {
       setIsLoading(false);
+      isLoadingRef.current = false;
     }
-  }, [hasMore, isLoading]);
+  }, []);
 
   // Initial load and refresh on trigger
   useEffect(() => {
     fetchWaitingList(1, true);
-  }, [refreshTrigger, fetchWaitingList]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshTrigger]); // fetchWaitingList is now stable with no dependencies
 
   // Intersection Observer for infinite scroll
   useEffect(() => {
@@ -83,7 +91,8 @@ export function WaitingList({ refreshTrigger }: WaitingListProps) {
         observer.unobserve(currentTarget);
       }
     };
-  }, [page, hasMore, isLoading, isInitialLoad, fetchWaitingList]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, hasMore, isLoading, isInitialLoad]); // fetchWaitingList is now stable
 
   if (isInitialLoad && isLoading) {
     return (
