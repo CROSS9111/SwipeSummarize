@@ -1,0 +1,344 @@
+/**
+ * Apple Design System - Tailwind CSS Preset
+ *
+ * Usage: Copy this file to your project and import it in your global CSS
+ * @import './tailwind-apple-preset.css';
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* System Colors */
+    --apple-blue: 0 122 255;
+    --apple-green: 52 199 89;
+    --apple-indigo: 88 86 214;
+    --apple-orange: 255 149 0;
+    --apple-pink: 255 45 85;
+    --apple-purple: 175 82 222;
+    --apple-red: 255 59 48;
+    --apple-teal: 90 200 250;
+    --apple-yellow: 255 204 0;
+
+    /* Light Mode */
+    --bg-primary: 255 255 255;
+    --bg-secondary: 242 242 247;
+    --bg-tertiary: 229 229 234;
+    --bg-elevated: 255 255 255;
+
+    --text-primary: 0 0 0;
+    --text-secondary: 60 60 67;
+    --text-tertiary: 60 60 67;
+
+    --separator: 60 60 67;
+
+    /* Grayscale */
+    --gray-1: 142 142 147;
+    --gray-2: 174 174 178;
+    --gray-3: 199 199 204;
+    --gray-4: 209 209 214;
+    --gray-5: 229 229 234;
+    --gray-6: 242 242 247;
+
+    /* Spacing */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
+
+    /* Border Radius */
+    --radius-xs: 4px;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 22px;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.08);
+
+    /* Animation */
+    --ease-default: cubic-bezier(0.25, 0.1, 0.25, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --duration-fast: 200ms;
+    --duration-normal: 300ms;
+  }
+
+  .dark,
+  [data-theme="dark"] {
+    /* Dark Mode System Colors */
+    --apple-blue: 10 132 255;
+    --apple-green: 48 209 88;
+    --apple-indigo: 94 92 230;
+    --apple-orange: 255 159 10;
+    --apple-pink: 255 55 95;
+    --apple-purple: 191 90 242;
+    --apple-red: 255 69 58;
+    --apple-teal: 100 210 255;
+    --apple-yellow: 255 214 10;
+
+    /* Dark Mode Backgrounds */
+    --bg-primary: 0 0 0;
+    --bg-secondary: 28 28 30;
+    --bg-tertiary: 44 44 46;
+    --bg-elevated: 58 58 60;
+
+    --text-primary: 255 255 255;
+    --text-secondary: 235 235 245;
+    --text-tertiary: 235 235 245;
+
+    --separator: 84 84 88;
+
+    /* Dark Mode Grayscale */
+    --gray-1: 142 142 147;
+    --gray-2: 99 99 102;
+    --gray-3: 72 72 74;
+    --gray-4: 58 58 60;
+    --gray-5: 44 44 46;
+    --gray-6: 28 28 30;
+
+    /* Dark Mode Shadows */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Base Styles */
+  html {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display',
+                 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: rgb(var(--bg-primary));
+    color: rgb(var(--text-primary));
+  }
+}
+
+@layer components {
+  /* Typography */
+  .text-large-title {
+    @apply text-[34px] font-bold leading-[41px] tracking-tight;
+  }
+
+  .text-title-1 {
+    @apply text-[28px] font-bold leading-[34px] tracking-tight;
+  }
+
+  .text-title-2 {
+    @apply text-[22px] font-bold leading-[28px];
+  }
+
+  .text-title-3 {
+    @apply text-[20px] font-semibold leading-[25px];
+  }
+
+  .text-headline {
+    @apply text-[17px] font-semibold leading-[22px];
+  }
+
+  .text-body {
+    @apply text-[17px] font-normal leading-[22px];
+  }
+
+  .text-callout {
+    @apply text-[16px] font-normal leading-[21px];
+  }
+
+  .text-subhead {
+    @apply text-[15px] font-normal leading-[20px];
+  }
+
+  .text-footnote {
+    @apply text-[13px] font-normal leading-[18px];
+  }
+
+  .text-caption {
+    @apply text-[12px] font-normal leading-[16px];
+  }
+
+  /* Buttons */
+  .btn-apple {
+    @apply inline-flex items-center justify-center
+           px-5 py-2.5 min-w-[80px]
+           text-[15px] font-semibold
+           rounded-[10px]
+           transition-all duration-200
+           active:scale-[0.98]
+           disabled:opacity-50 disabled:cursor-not-allowed
+           focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+
+  .btn-primary {
+    @apply btn-apple
+           bg-[rgb(var(--apple-blue))] text-white
+           hover:bg-[rgb(0,102,204)]
+           focus:ring-[rgb(var(--apple-blue))]/50;
+  }
+
+  .btn-secondary {
+    @apply btn-apple
+           bg-[rgb(var(--bg-secondary))]
+           text-[rgb(var(--apple-blue))]
+           hover:bg-[rgb(var(--bg-tertiary))];
+  }
+
+  .btn-destructive {
+    @apply btn-apple
+           bg-[rgb(var(--apple-red))] text-white
+           hover:bg-[rgb(230,53,43)]
+           focus:ring-[rgb(var(--apple-red))]/50;
+  }
+
+  /* Cards */
+  .card-apple {
+    @apply bg-[rgb(var(--bg-elevated))]
+           rounded-2xl p-5
+           shadow-[var(--shadow-md)];
+  }
+
+  .card-interactive {
+    @apply card-apple
+           transition-all duration-200
+           hover:shadow-[var(--shadow-lg)]
+           hover:scale-[1.02]
+           active:scale-[0.98]
+           cursor-pointer;
+  }
+
+  /* Glass Effect */
+  .glass {
+    @apply bg-white/70 dark:bg-[rgb(28,28,30)]/70
+           backdrop-blur-xl backdrop-saturate-[180%]
+           border border-white/20 dark:border-white/10;
+  }
+
+  /* Inputs */
+  .input-apple {
+    @apply w-full px-4 py-3
+           bg-[rgb(var(--bg-secondary))]
+           text-[17px] text-[rgb(var(--text-primary))]
+           rounded-xl
+           border-2 border-transparent
+           outline-none
+           placeholder:text-[rgb(var(--text-secondary))]/40
+           transition-all duration-200
+           focus:border-[rgb(var(--apple-blue))]
+           focus:bg-[rgb(var(--bg-primary))];
+  }
+
+  /* Navigation */
+  .navbar-apple {
+    @apply fixed top-0 left-0 right-0 z-50
+           h-[44px]
+           glass
+           flex items-center justify-between
+           px-4;
+  }
+
+  /* Separator */
+  .separator {
+    @apply h-px bg-[rgb(var(--separator))]/12;
+  }
+
+  .separator-dark {
+    @apply h-px bg-[rgb(var(--separator))]/65;
+  }
+}
+
+@layer utilities {
+  /* Text Colors */
+  .text-apple-blue { color: rgb(var(--apple-blue)); }
+  .text-apple-green { color: rgb(var(--apple-green)); }
+  .text-apple-red { color: rgb(var(--apple-red)); }
+  .text-apple-orange { color: rgb(var(--apple-orange)); }
+  .text-apple-purple { color: rgb(var(--apple-purple)); }
+
+  .text-primary { color: rgb(var(--text-primary)); }
+  .text-secondary { color: rgb(var(--text-secondary) / 0.6); }
+  .text-tertiary { color: rgb(var(--text-tertiary) / 0.3); }
+
+  /* Background Colors */
+  .bg-apple-blue { background-color: rgb(var(--apple-blue)); }
+  .bg-apple-green { background-color: rgb(var(--apple-green)); }
+  .bg-apple-red { background-color: rgb(var(--apple-red)); }
+  .bg-apple-orange { background-color: rgb(var(--apple-orange)); }
+  .bg-apple-purple { background-color: rgb(var(--apple-purple)); }
+
+  .bg-primary { background-color: rgb(var(--bg-primary)); }
+  .bg-secondary { background-color: rgb(var(--bg-secondary)); }
+  .bg-tertiary { background-color: rgb(var(--bg-tertiary)); }
+  .bg-elevated { background-color: rgb(var(--bg-elevated)); }
+
+  /* Shadows */
+  .shadow-apple-sm { box-shadow: var(--shadow-sm); }
+  .shadow-apple-md { box-shadow: var(--shadow-md); }
+  .shadow-apple-lg { box-shadow: var(--shadow-lg); }
+
+  /* Border Radius */
+  .rounded-apple-xs { border-radius: var(--radius-xs); }
+  .rounded-apple-sm { border-radius: var(--radius-sm); }
+  .rounded-apple-md { border-radius: var(--radius-md); }
+  .rounded-apple-lg { border-radius: var(--radius-lg); }
+  .rounded-apple-xl { border-radius: var(--radius-xl); }
+
+  /* Animation */
+  .ease-apple { transition-timing-function: var(--ease-default); }
+  .ease-spring { transition-timing-function: var(--ease-spring); }
+  .duration-fast { transition-duration: var(--duration-fast); }
+  .duration-normal { transition-duration: var(--duration-normal); }
+
+  /* Safe Area */
+  .safe-top { padding-top: env(safe-area-inset-top); }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+  .safe-left { padding-left: env(safe-area-inset-left); }
+  .safe-right { padding-right: env(safe-area-inset-right); }
+}
+
+/* Keyframes */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in { animation: fadeIn var(--duration-normal) var(--ease-default); }
+.animate-scale-in { animation: scaleIn var(--duration-normal) var(--ease-spring); }
+.animate-slide-up { animation: slideUp var(--duration-normal) var(--ease-default); }
+.animate-slide-down { animation: slideDown var(--duration-normal) var(--ease-default); }
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
