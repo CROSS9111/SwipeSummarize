@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +15,7 @@ import { DeleteButton } from "@/components/saved/DeleteButton";
 import { ConfirmDeleteDialog } from "@/components/saved/ConfirmDeleteDialog";
 import { BatchSelectControl } from "@/components/saved/BatchSelectControl";
 import { TagSidebar } from "@/components/saved/TagSidebar";
+import { parseSummaryData } from "@/lib/tags";
 
 export default function SavedPage() {
   const [savedItems, setSavedItems] = useState<SavedRecord[]>([]);
@@ -37,10 +38,10 @@ export default function SavedPage() {
     setFilteredItems(savedItems);
   }, [savedItems]);
 
-  const handleItemsFiltered = (items: SavedRecord[]) => {
+  const handleItemsFiltered = useCallback((items: SavedRecord[]) => {
     setFilteredItems(items);
     setSelectedIds([]);
-  };
+  }, []);
 
   const fetchSavedItems = async () => {
     setIsLoading(true);
@@ -52,7 +53,9 @@ export default function SavedPage() {
       const data = await response.json();
       setSavedItems(data);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "エラーが発生しました");
+      toast.error(
+        error instanceof Error ? error.message : "エラーが発生しました"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -68,37 +71,7 @@ export default function SavedPage() {
     });
   };
 
-  // Parse summary and tags if they are in JSON format
-  const parseSummaryData = (item: SavedRecord) => {
-    let summaryText = item.summary;
-    let tags = item.tags || [];
-
-    // Check if summary is a JSON string
-    if (item.summary && item.summary.includes('```json')) {
-      try {
-        // Extract JSON from markdown code block
-        const jsonMatch = item.summary.match(/```json\n([\s\S]*?)\n```/);
-        if (jsonMatch && jsonMatch[1]) {
-          const parsed = JSON.parse(jsonMatch[1]);
-          summaryText = parsed.summary || item.summary;
-          tags = parsed.tags || tags;
-        }
-      } catch (e) {
-        console.error("Failed to parse summary JSON:", e);
-      }
-    } else if (item.summary && item.summary.startsWith('{')) {
-      try {
-        // Try direct JSON parse
-        const parsed = JSON.parse(item.summary);
-        summaryText = parsed.summary || item.summary;
-        tags = parsed.tags || tags;
-      } catch (e) {
-        console.error("Failed to parse summary JSON:", e);
-      }
-    }
-
-    return { summaryText, tags };
-  };
+  // 開発メモ: lib/tags.ts に移行済み
 
   // 選択状態の管理
   const handleSelectItem = (id: string) => {
@@ -182,7 +155,9 @@ export default function SavedPage() {
       setDeleteTarget(null);
       await fetchSavedItems(); // リストを再取得
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "削除に失敗しました");
+      toast.error(
+        error instanceof Error ? error.message : "削除に失敗しました"
+      );
     } finally {
       setIsDeleting(false);
     }
@@ -258,9 +233,7 @@ export default function SavedPage() {
               totalCount={filteredItems.length}
               onSelectAll={handleSelectAll}
               onDeselectAll={handleDeselectAll}
-              onDeleteSelected={() =>
-                openDeleteModal("batch", selectedIds)
-              }
+              onDeleteSelected={() => openDeleteModal("batch", selectedIds)}
               onDeleteAll={() => openDeleteModal("all")}
               disabled={isDeleting}
             />
@@ -306,62 +279,65 @@ export default function SavedPage() {
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
                 {filteredItems.map((item) => {
-              const { summaryText, tags } = parseSummaryData(item);
-              return (
-                <Card key={item.id} className="flex flex-col h-full relative">
-                  {/* チェックボックスと削除ボタン */}
-                  <div className="absolute top-2 right-2 flex items-center gap-2">
-                    <Checkbox
-                      checked={selectedIds.includes(item.id)}
-                      onCheckedChange={() => handleSelectItem(item.id)}
-                      aria-label={`${item.title}を選択`}
-                    />
-                    <DeleteButton
-                      id={item.id}
-                      onDelete={(id) =>
-                        openDeleteModal("single", [id], item.title)
-                      }
-                      disabled={isDeleting}
-                    />
-                  </div>
-
-                  <CardHeader className="pr-24">
-                    <CardTitle className="text-lg line-clamp-2">
-                      {item.title}
-                    </CardTitle>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
-                      <Calendar className="h-3 w-3" />
-                      <span>{formatDate(item.created_at)}</span>
-                    </div>
-                    <a
-                      href={item.original_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-sm text-primary hover:underline mt-2"
+                  const { summaryText, tags } = parseSummaryData(item);
+                  return (
+                    <Card
+                      key={item.id}
+                      className="flex flex-col h-full relative"
                     >
-                      <ExternalLink className="h-3 w-3" />
-                      元の記事を読む
-                    </a>
-                  </CardHeader>
-                  <CardContent className="flex-1">
-                    {tags && tags.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {tags.map((tag, index) => (
-                          <Badge key={index} variant="secondary">
-                            <Tag className="h-3 w-3 mr-1" />
-                            {tag}
-                          </Badge>
-                        ))}
+                      {/* チェックボックスと削除ボタン */}
+                      <div className="absolute top-2 right-2 flex items-center gap-2">
+                        <Checkbox
+                          checked={selectedIds.includes(item.id)}
+                          onCheckedChange={() => handleSelectItem(item.id)}
+                          aria-label={`${item.title}を選択`}
+                        />
+                        <DeleteButton
+                          id={item.id}
+                          onDelete={(id) =>
+                            openDeleteModal("single", [id], item.title)
+                          }
+                          disabled={isDeleting}
+                        />
                       </div>
-                    )}
-                    <ScrollArea className="h-32">
-                      <p className="text-sm leading-relaxed line-clamp-6">
-                        {summaryText}
-                      </p>
-                    </ScrollArea>
-                  </CardContent>
-                </Card>
-              );
+
+                      <CardHeader className="pr-24">
+                        <CardTitle className="text-lg line-clamp-2">
+                          {item.title}
+                        </CardTitle>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
+                          <Calendar className="h-3 w-3" />
+                          <span>{formatDate(item.created_at)}</span>
+                        </div>
+                        <a
+                          href={item.original_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-sm text-primary hover:underline mt-2"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          元の記事を読む
+                        </a>
+                      </CardHeader>
+                      <CardContent className="flex-1">
+                        {tags && tags.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mb-3">
+                            {tags.map((tag, index) => (
+                              <Badge key={index} variant="secondary">
+                                <Tag className="h-3 w-3 mr-1" />
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                        <ScrollArea className="h-32">
+                          <p className="text-sm leading-relaxed line-clamp-6">
+                            {summaryText}
+                          </p>
+                        </ScrollArea>
+                      </CardContent>
+                    </Card>
+                  );
                 })}
               </div>
             )}

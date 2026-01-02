@@ -1,6 +1,12 @@
-import { useState, useCallback, useMemo } from 'react';
-import DOMPurify from 'dompurify';
-import type { SavedRecord, TagWithCount, SanitizedTag, TagsResponse } from '@/types';
+import { useState, useCallback, useMemo } from "react";
+import DOMPurify from "dompurify";
+import type {
+  SavedRecord,
+  TagWithCount,
+  SanitizedTag,
+  TagsResponse,
+} from "@/types";
+import { parseSummaryData } from "@/lib/tags";
 
 interface UseTagFilterReturn {
   tags: SanitizedTag[];
@@ -22,17 +28,16 @@ function filterItemsByTags(
   if (selectedTags.length === 0) return items;
 
   // 入力値をサニタイズ
-  const sanitizedTags = selectedTags.map(tag =>
-    DOMPurify.sanitize(tag.trim())
-  ).filter(Boolean);
+  const sanitizedTags = selectedTags
+    .map((tag) => DOMPurify.sanitize(tag.trim()))
+    .filter(Boolean);
 
-  return items.filter(item => {
-    if (!item.tags || !Array.isArray(item.tags)) return false;
+  return items.filter((item) => {
+    const { tags } = parseSummaryData(item);
+    if (!tags || !Array.isArray(tags)) return false;
 
-    return sanitizedTags.some(selectedTag =>
-      item.tags.some(itemTag =>
-        DOMPurify.sanitize(itemTag) === selectedTag
-      )
+    return sanitizedTags.some((selectedTag) =>
+      tags.some((itemTag) => DOMPurify.sanitize(itemTag) === selectedTag)
     );
   });
 }
@@ -48,14 +53,14 @@ export function useTagFilter(savedItems: SavedRecord[]): UseTagFilterReturn {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/saved/tags');
+      const response = await fetch("/api/saved/tags");
       if (!response.ok) {
-        throw new Error('Failed to fetch tags');
+        throw new Error("Failed to fetch tags");
       }
       const data: TagsResponse = await response.json();
       setTagsData(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setIsLoading(false);
     }
@@ -67,16 +72,19 @@ export function useTagFilter(savedItems: SavedRecord[]): UseTagFilterReturn {
   }, [fetchTags]);
 
   // セキュアなタグ選択処理
-  const selectTag = useCallback((tag: string) => {
-    const sanitizedTag = DOMPurify.sanitize(tag.trim());
-    if (sanitizedTag && !selectedTags.includes(sanitizedTag)) {
-      setSelectedTags(prev => [...prev, sanitizedTag]);
-    }
-  }, [selectedTags]);
+  const selectTag = useCallback(
+    (tag: string) => {
+      const sanitizedTag = DOMPurify.sanitize(tag.trim());
+      if (sanitizedTag && !selectedTags.includes(sanitizedTag)) {
+        setSelectedTags((prev) => [...prev, sanitizedTag]);
+      }
+    },
+    [selectedTags]
+  );
 
   const deselectTag = useCallback((tag: string) => {
     const sanitizedTag = DOMPurify.sanitize(tag.trim());
-    setSelectedTags(prev => prev.filter(t => t !== sanitizedTag));
+    setSelectedTags((prev) => prev.filter((t) => t !== sanitizedTag));
   }, []);
 
   const clearAllTags = useCallback(() => {
@@ -95,7 +103,7 @@ export function useTagFilter(savedItems: SavedRecord[]): UseTagFilterReturn {
     return tagsData.tags.map((tag) => ({
       tag: DOMPurify.sanitize(tag.tag),
       count: tag.count,
-      isSelected: selectedTags.includes(DOMPurify.sanitize(tag.tag))
+      isSelected: selectedTags.includes(DOMPurify.sanitize(tag.tag)),
     }));
   }, [tagsData, selectedTags]);
 
@@ -108,6 +116,6 @@ export function useTagFilter(savedItems: SavedRecord[]): UseTagFilterReturn {
     selectTag,
     deselectTag,
     clearAllTags,
-    refetch: fetchTags
+    refetch: fetchTags,
   };
 }
