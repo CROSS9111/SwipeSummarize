@@ -152,10 +152,12 @@ DELETE /api/urls/:id       # URL削除（すてる）
 #### Saved（保存済み）
 
 ```
-POST   /api/saved          # 要約を保存（とっとく）
-GET    /api/saved          # 保存済みリスト取得
-GET    /api/saved/:id      # 保存済み詳細取得
-DELETE /api/saved/:id      # 保存済み削除
+POST   /api/saved              # 要約を保存（とっとく）
+GET    /api/saved              # 保存済みリスト取得
+GET    /api/saved?tags=a,b     # タグでフィルタリング（OR検索）
+GET    /api/saved/tags         # 使用中タグ一覧取得
+GET    /api/saved/:id          # 保存済み詳細取得
+DELETE /api/saved/:id          # 保存済み削除
 ```
 
 ### 4.2 API 詳細
@@ -213,6 +215,59 @@ URL をウェイティングリストに追加
   "summary": "AIによる要約テキスト...",
   "original_url": "https://example.com/article",
   "tags": ["tech", "ai"]
+}
+```
+
+**タグバリデーション:**
+
+| ルール | 詳細 |
+|--------|------|
+| 文字数 | 1〜50文字 |
+| 許可文字 | 英数字、ひらがな、カタカナ、漢字、スペース、ハイフン、アンダースコア |
+| 最大数 | 配列で複数指定可 |
+
+#### GET /api/saved
+
+保存済みリストを取得（タグフィルタリング対応）
+
+**Query Parameters:**
+
+| パラメータ | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| `tags` | string | No | カンマ区切りのタグ（例: `tech,ai`）。OR検索で一致する記事を返す |
+
+**Request例:**
+
+```
+GET /api/saved                    # 全件取得
+GET /api/saved?tags=tech          # "tech" タグを含む記事
+GET /api/saved?tags=tech,ai       # "tech" または "ai" を含む記事
+```
+
+**Response:**
+
+```json
+[
+  {
+    "id": "uuid-xxx",
+    "title": "記事タイトル",
+    "summary": "AIによる要約テキスト...",
+    "original_url": "https://example.com/article",
+    "tags": ["tech", "ai"],
+    "created_at": "2025-12-26T10:00:00Z"
+  }
+]
+```
+
+**エラーレスポンス (400):**
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "不正なタグパラメータです",
+    "details": [{ "message": "タグが長すぎます（50文字以内）" }]
+  }
 }
 ```
 
@@ -522,7 +577,7 @@ ${content.slice(0, 10000)}  // トークン制限対策
 
 - [x] スワイプアニメーション（Framer Motion）
 - [x] 保存済みリスト画面
-- [ ] タグ機能
+- [x] タグ機能（自動生成 + フィルタリング）
 - [ ] レスポンシブ対応
 
 ### Phase 3: 改善・追加機能（1 週間）
