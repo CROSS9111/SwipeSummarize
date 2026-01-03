@@ -1,11 +1,6 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import DOMPurify from "dompurify";
-import type {
-  SavedRecord,
-  TagWithCount,
-  SanitizedTag,
-  TagsResponse,
-} from "@/types";
+import type { SavedRecord, SanitizedTag, TagsResponse } from "@/types";
 import { parseSummaryData } from "@/lib/tags";
 
 interface UseTagFilterReturn {
@@ -67,14 +62,14 @@ export function useTagFilter(savedItems: SavedRecord[]): UseTagFilterReturn {
   }, []);
 
   // 初期ロード
-  useMemo(() => {
+  useEffect(() => {
     fetchTags();
   }, [fetchTags]);
 
   // セキュアなタグ選択処理
   const selectTag = useCallback(
     (tag: string) => {
-      const sanitizedTag = DOMPurify.sanitize(tag.trim());
+      const sanitizedTag = tag.trim();
       if (sanitizedTag && !selectedTags.includes(sanitizedTag)) {
         setSelectedTags((prev) => [...prev, sanitizedTag]);
       }
@@ -83,7 +78,7 @@ export function useTagFilter(savedItems: SavedRecord[]): UseTagFilterReturn {
   );
 
   const deselectTag = useCallback((tag: string) => {
-    const sanitizedTag = DOMPurify.sanitize(tag.trim());
+    const sanitizedTag = tag.trim();
     setSelectedTags((prev) => prev.filter((t) => t !== sanitizedTag));
   }, []);
 
@@ -103,7 +98,7 @@ export function useTagFilter(savedItems: SavedRecord[]): UseTagFilterReturn {
     return tagsData.tags.map((tag) => ({
       tag: DOMPurify.sanitize(tag.tag),
       count: tag.count,
-      isSelected: selectedTags.includes(DOMPurify.sanitize(tag.tag)),
+      isSelected: selectedTags.includes(tag.tag),
     }));
   }, [tagsData, selectedTags]);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,18 +8,32 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, ExternalLink, Calendar, Tag } from "lucide-react";
+import {
+  ArrowLeft,
+  ExternalLink,
+  Calendar,
+  Tag,
+  PanelLeft,
+  PanelLeftClose,
+} from "lucide-react";
 import { SavedRecord } from "@/types";
 import { toast } from "sonner";
 import { DeleteButton } from "@/components/saved/DeleteButton";
 import { ConfirmDeleteDialog } from "@/components/saved/ConfirmDeleteDialog";
 import { BatchSelectControl } from "@/components/saved/BatchSelectControl";
 import { TagSidebar } from "@/components/saved/TagSidebar";
+import { SelectedTagsBar } from "@/components/saved/SelectedTagsBar";
+import { useTagFilter } from "@/hooks/useTagFilter";
 import { parseSummaryData } from "@/lib/tags";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function SavedPage() {
   const [savedItems, setSavedItems] = useState<SavedRecord[]>([]);
-  const [filteredItems, setFilteredItems] = useState<SavedRecord[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -30,18 +44,30 @@ export default function SavedPage() {
     title?: string;
   } | null>(null);
 
+  // サイドバー開閉状態
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  // useTagFilter をページレベルで使用
+  const {
+    tags,
+    selectedTags,
+    filteredItems,
+    isLoading: isTagLoading,
+    error: tagError,
+    selectTag,
+    deselectTag,
+    clearAllTags,
+  } = useTagFilter(savedItems);
+
   useEffect(() => {
     fetchSavedItems();
   }, []);
 
+  // 選択状態をリセット（フィルタ変更時）
   useEffect(() => {
-    setFilteredItems(savedItems);
-  }, [savedItems]);
-
-  const handleItemsFiltered = useCallback((items: SavedRecord[]) => {
-    setFilteredItems(items);
     setSelectedIds([]);
-  }, []);
+  }, [selectedTags]);
 
   const fetchSavedItems = async () => {
     setIsLoading(true);
@@ -71,7 +97,13 @@ export default function SavedPage() {
     });
   };
 
-  // 開発メモ: lib/tags.ts に移行済み
+  // サイドバートグル（連打対策付き）
+  const handleToggleSidebar = () => {
+    if (isAnimating) return;
+    setIsAnimating(true);
+    setIsSidebarOpen((prev) => !prev);
+    setTimeout(() => setIsAnimating(false), 300);
+  };
 
   // 選択状態の管理
   const handleSelectItem = (id: string) => {
@@ -192,17 +224,32 @@ export default function SavedPage() {
     <div className="flex h-screen overflow-hidden">
       {/* タグサイドバー - デスクトップのみ */}
       {!isLoading && savedItems.length > 0 && (
-        <div className="hidden lg:block">
-          <TagSidebar
-            savedItems={savedItems}
-            onItemsFiltered={handleItemsFiltered}
-          />
+        <div
+          className={`hidden lg:block transition-all duration-300 ease-in-out border-r border-border overflow-hidden ${
+            isSidebarOpen ? "w-60" : "w-0"
+          }`}
+          id="tag-sidebar-container"
+          aria-hidden={!isSidebarOpen}
+        >
+          <div className="w-60 h-full">
+            <TagSidebar
+              tags={tags}
+              selectedTags={selectedTags}
+              filteredCount={filteredItems.length}
+              totalCount={savedItems.length}
+              isLoading={isTagLoading}
+              error={tagError}
+              onSelectTag={selectTag}
+              onDeselectTag={deselectTag}
+              onClearAll={clearAllTags}
+            />
+          </div>
         </div>
       )}
 
       {/* メインコンテンツ */}
-      <div className="flex-1 overflow-auto">
-        <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="flex-1 overflow-auto flex flex-col">
+        <div className="container mx-auto px-4 py-8 max-w-6xl flex-1">
           {/* ヘッダー */}
           <header className="mb-8">
             <div className="flex items-center justify-between mb-6">
@@ -217,14 +264,54 @@ export default function SavedPage() {
                   )}
                 </p>
               </div>
-              <Link href="/">
-                <Button variant="outline">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  ホームに戻る
-                </Button>
-              </Link>
+              <div className="flex items-center gap-2">
+                {/* サイドバートグルボタン - デスクトップのみ */}
+                {!isLoading && savedItems.length > 0 && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={handleToggleSidebar}
+                          className="hidden lg:flex"
+                          aria-expanded={isSidebarOpen}
+                          aria-controls="tag-sidebar"
+                          disabled={isAnimating}
+                        >
+                          {isSidebarOpen ? (
+                            <PanelLeftClose className="h-4 w-4" />
+                          ) : (
+                            <PanelLeft className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>サイドバーを{isSidebarOpen ? "閉じる" : "開く"}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+                <Link href="/">
+                  <Button variant="outline">
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    ホームに戻る
+                  </Button>
+                </Link>
+              </div>
             </div>
           </header>
+
+          {/* 選択中タグバー */}
+          {!isLoading && selectedTags.length > 0 && (
+            <div className="mb-4 -mx-4">
+              <SelectedTagsBar
+                selectedTags={selectedTags}
+                onRemoveTag={deselectTag}
+                onClearAll={clearAllTags}
+              />
+            </div>
+          )}
 
           {/* 一括選択コントロール */}
           {!isLoading && filteredItems.length > 0 && (
