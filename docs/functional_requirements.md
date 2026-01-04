@@ -30,6 +30,7 @@ SwipeSummarize は、「後で読む」記事を AI 要約でサクサク消化�
 | F-004-SUMMARY-GEN    | AI 要約生成               | コンテンツ | 高     | 実装済み   |
 | F-005-TEST-CHAT      | LLMテストチャット         | 開発ツール | 中     | 実装済み   |
 | F-006-WAITING-LIST   | Waiting List表示          | UI/UX    | 中     | 実装済み   |
+| F-007-ASYNC-PROCESS  | 非同期要約処理            | コンテンツ | 高     | 実装済み   |
 
 ---
 
@@ -199,6 +200,63 @@ Tinder 風のスワイプ操作で記事を効率的に処理できる UI。
 - データベーススキーマ制約により、実装時にタイトル表示をドメイン名表示に変更
 - 全URLが「待機中」として表示（要約の有無に関わらず）
 - モバイルでのタップ領域最適化済み
+
+---
+
+### F-007-ASYNC-PROCESS: 非同期要約処理
+
+#### 概要
+URL登録時の要約・タグ生成処理を非同期化し、ユーザー体験を向上させる機能。Next.js 15.1+ の `after()` API を使用してバックグラウンドで処理を実行する。
+
+#### ビジネス価値
+- URL登録時の待ち時間を解消（即座にレスポンス返却）
+- 要約処理の失敗時もURLは保持され、リトライ可能
+- ユーザーは要約処理の進捗をWaiting Listで確認可能
+
+#### ユーザーストーリー
+- ユーザーとして、URLを登録すると即座にレスポンスを受け取りたい
+- ユーザーとして、ランダム取得時に要約済みの記事のみが表示されてほしい
+- ユーザーとして、Waiting Listで要約処理中のURLを確認したい
+- ユーザーとして、エラーになったURLをリトライしたい
+
+#### 主要機能
+1. **非同期要約処理**
+   - URL登録時に即座に202 Acceptedを返却
+   - `after()` APIでバックグラウンド処理開始
+   - 結果はSupabaseに永続化
+
+2. **ステータス管理**
+   - pending → processing → completed/error
+   - Optimistic Lockingで並行処理を制御
+
+3. **リトライ機能**
+   - 最大3回の自動リトライ（1秒→2秒→3秒間隔）
+   - エラー時は手動リトライ可能
+
+4. **セキュリティ**
+   - SSRF対策（localhost、プライベートIPブロック）
+   - URL形式バリデーション
+
+#### 技術仕様
+- **API**:
+  - `POST /api/urls` (変更: 非同期処理追加)
+  - `GET /api/urls/random` (変更: completed URLのみ対象)
+  - `GET /api/urls/waiting-list` (変更: ステータス情報追加)
+  - `POST /api/urls/[id]/retry` (新規)
+- **ユーティリティ**:
+  - `lib/async-summarize.ts` (非同期処理)
+  - `lib/url-validator.ts` (URL検証・SSRF対策)
+- **データベース**: `urls`テーブル（title, summary, status, error_message, retry_count, version追加）
+
+#### 制約事項
+- Next.js 15.1+ 必須（`after()` API使用）
+- Vercel Fluid Computeにより実行時間上限は最大60秒
+- 要約完了時のリアルタイム通知は未対応（将来課題）
+
+#### 関連ドキュメント
+- [設計書](./specs/async-process/design.md)
+- [DBマイグレーション](../supabase/migrations/20260103_add_async_processing_columns.sql)
+- [テストケース](./__tests__/lib/url-validator.test.ts)
 
 ---
 

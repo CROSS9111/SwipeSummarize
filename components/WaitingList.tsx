@@ -4,77 +4,187 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { WaitingListItem } from "./WaitingListItem";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, FileText } from "lucide-react";
+import {
+  Loader2,
+  FileText,
+  Clock,
+  Zap,
+  CheckCircle,
+  XCircle,
+  RefreshCw,
+} from "lucide-react";
 import { toast } from "sonner";
+import type {
+  WaitingListItem as WaitingListItemType,
+  UrlStatus,
+} from "@/types";
 
-interface WaitingItem {
-  id: string;
-  url: string;
-  created_at: string;
+interface StatusCounts {
+  pending: number;
+  processing: number;
+  completed: number;
+  error: number;
 }
 
 interface WaitingListProps {
   refreshTrigger?: number;
 }
 
+/**
+ * WaitingList コンポーネント
+ * Feature: F-007-ASYNC-PROCESS
+ *
+ * - ステータスバッジ付きのURL一覧表示
+ * - エラーURLのリトライ機能
+ * - ステータス別件数表示
+ */
 export function WaitingList({ refreshTrigger }: WaitingListProps) {
-  const [items, setItems] = useState<WaitingItem[]>([]);
+  const [items, setItems] = useState<WaitingListItemType[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [total, setTotal] = useState(0);
+  const [statusCounts, setStatusCounts] = useState<StatusCounts>({
+    pending: 0,
+    processing: 0,
+    completed: 0,
+    error: 0,
+  });
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isBatchProcessing, setIsBatchProcessing] = useState(false);
   const observerTarget = useRef<HTMLDivElement>(null);
 
   // Use refs to track state without causing re-renders
   const isLoadingRef = useRef(false);
   const hasMoreRef = useRef(true);
 
-  const fetchWaitingList = useCallback(async (pageNum: number, reset = false) => {
-    if (!reset && (isLoadingRef.current || !hasMoreRef.current)) return;
+  const fetchWaitingList = useCallback(
+    async (pageNum: number, reset = false) => {
+      if (!reset && (isLoadingRef.current || !hasMoreRef.current)) return;
 
-    setIsLoading(true);
-    isLoadingRef.current = true;
+      setIsLoading(true);
+      isLoadingRef.current = true;
+      try {
+        const response = await fetch(
+          `/api/urls/waiting-list?page=${pageNum}&limit=20`
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch waiting list");
+        }
+
+        const data = await response.json();
+
+        setItems((prev) => (reset ? data.items : [...prev, ...data.items]));
+        setHasMore(data.pagination.hasMore);
+        hasMoreRef.current = data.pagination.hasMore;
+        setTotal(data.pagination.total);
+        setStatusCounts(
+          data.statusCounts || {
+            pending: 0,
+            processing: 0,
+            completed: 0,
+            error: 0,
+          }
+        );
+        setPage(pageNum);
+
+        if (reset) {
+          setIsInitialLoad(false);
+        }
+      } catch (error) {
+        console.error("Error fetching waiting list:", error);
+        if (pageNum === 1) {
+          toast.error("リストの取得に失敗しました");
+        }
+      } finally {
+        setIsLoading(false);
+        isLoadingRef.current = false;
+      }
+    },
+    []
+  );
+
+  const handleRetry = useCallback(async (id: string) => {
     try {
-      const response = await fetch(`/api/urls/waiting-list?page=${pageNum}&limit=20`);
+      const response = await fetch(`/api/urls/${id}/retry`, {
+        method: "POST",
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to fetch waiting list");
+        const data = await response.json();
+        throw new Error(data.error?.message || "リトライに失敗しました");
+      }
+
+      toast.success("要約処理を再開しました");
+
+      // 該当アイテムのステータスを更新
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                status: "pending" as UrlStatus,
+                error_message: undefined,
+              }
+            : item
+        )
+      );
+    } catch (error) {
+      console.error("Retry error:", error);
+      toast.error(
+        error instanceof Error ? error.message : "リトライに失敗しました"
+      );
+    }
+  }, []);
+
+  const handleBatchProcess = async () => {
+    if (isBatchProcessing) return;
+
+    setIsBatchProcessing(true);
+    try {
+      const response = await fetch("/api/urls/batch-process", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error?.message || "一括処理の開始に失敗しました");
       }
 
       const data = await response.json();
+      toast.success(data.message);
 
-      setItems(prev => reset ? data.items : [...prev, ...data.items]);
-      setHasMore(data.pagination.hasMore);
-      hasMoreRef.current = data.pagination.hasMore;
-      setTotal(data.pagination.total);
-      setPage(pageNum);
-
-      if (reset) {
-        setIsInitialLoad(false);
-      }
+      // 少し待ってからリストを更新
+      setTimeout(() => {
+        fetchWaitingList(1, true);
+      }, 1000);
     } catch (error) {
-      console.error("Error fetching waiting list:", error);
-      if (pageNum === 1) {
-        toast.error("リストの取得に失敗しました");
-      }
+      console.error("Batch process error:", error);
+      toast.error(
+        error instanceof Error ? error.message : "一括処理に失敗しました"
+      );
     } finally {
-      setIsLoading(false);
-      isLoadingRef.current = false;
+      setIsBatchProcessing(false);
     }
-  }, []);
+  };
 
   // Initial load and refresh on trigger
   useEffect(() => {
     fetchWaitingList(1, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshTrigger]); // fetchWaitingList is now stable with no dependencies
+  }, [refreshTrigger]);
 
   // Intersection Observer for infinite scroll
   useEffect(() => {
     const observer = new IntersectionObserver(
-      entries => {
-        if (entries[0].isIntersecting && hasMore && !isLoading && !isInitialLoad) {
+      (entries) => {
+        if (
+          entries[0].isIntersecting &&
+          hasMore &&
+          !isLoading &&
+          !isInitialLoad
+        ) {
           fetchWaitingList(page + 1);
         }
       },
@@ -92,7 +202,7 @@ export function WaitingList({ refreshTrigger }: WaitingListProps) {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, hasMore, isLoading, isInitialLoad]); // fetchWaitingList is now stable
+  }, [page, hasMore, isLoading, isInitialLoad]);
 
   if (isInitialLoad && isLoading) {
     return (
@@ -118,14 +228,52 @@ export function WaitingList({ refreshTrigger }: WaitingListProps) {
   return (
     <div className="border rounded-lg">
       <div className="p-4 border-b bg-muted/30">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-2">
           <h2 className="font-semibold flex items-center gap-2">
             <FileText className="h-5 w-5" />
             Waiting List
           </h2>
-          <span className="text-sm text-muted-foreground">
-            {total}件
-          </span>
+          <div className="flex items-center gap-2">
+            {(statusCounts.pending > 0 || statusCounts.error > 0) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleBatchProcess}
+                disabled={isBatchProcessing}
+                className="h-8 gap-1 text-xs"
+              >
+                {isBatchProcessing ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3 w-3" />
+                )}
+                一括更新
+              </Button>
+            )}
+            <span className="text-sm text-muted-foreground">{total}件</span>
+          </div>
+        </div>
+
+        {/* Status Summary */}
+        <div className="flex gap-3 text-xs">
+          <div className="flex items-center gap-1 text-yellow-600 dark:text-yellow-400">
+            <Clock className="h-3 w-3" />
+            <span>{statusCounts.pending}</span>
+          </div>
+          <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
+            <Zap className="h-3 w-3" />
+            <span>{statusCounts.processing}</span>
+          </div>
+          <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
+            <CheckCircle className="h-3 w-3" />
+            <span>{statusCounts.completed}</span>
+          </div>
+          {statusCounts.error > 0 && (
+            <div className="flex items-center gap-1 text-red-600 dark:text-red-400">
+              <XCircle className="h-3 w-3" />
+              <span>{statusCounts.error}</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -134,8 +282,13 @@ export function WaitingList({ refreshTrigger }: WaitingListProps) {
           {items.map((item) => (
             <WaitingListItem
               key={item.id}
+              id={item.id}
               url={item.url}
+              domain={item.domain}
+              status={item.status}
+              error_message={item.error_message}
               createdAt={item.created_at}
+              onRetry={handleRetry}
             />
           ))}
 
