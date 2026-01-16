@@ -1,16 +1,29 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { UrlInput } from "@/components/UrlInput";
 import { SummaryCard } from "@/components/SummaryCard";
 import { ActionButtons } from "@/components/ActionButtons";
-import { SwipeableCard } from "@/components/SwipeableCard";
 import { WaitingList } from "@/components/WaitingList";
 import { Button } from "@/components/ui/button";
 import { SummaryWithUrl } from "@/types";
 import { toast } from "sonner";
 import { BookOpen, Sparkles } from "lucide-react";
+
+// framer-motion を含む SwipeableCard を動的インポート（バンドルサイズ最適化）
+const SwipeableCard = dynamic(
+  () => import("@/components/SwipeableCard").then((mod) => mod.SwipeableCard),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full max-w-2xl">
+        <SummaryCard isLoading={true} />
+      </div>
+    ),
+  }
+);
 
 export default function Home() {
   const [summary, setSummary] = useState<SummaryWithUrl | undefined>();

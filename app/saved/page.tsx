@@ -44,8 +44,8 @@ export default function SavedPage() {
     title?: string;
   } | null>(null);
 
-  // サイドバー開閉状態
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  // サイドバー開閉状態（初期は閉じた状態）
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
   // useTagFilter をページレベルで使用

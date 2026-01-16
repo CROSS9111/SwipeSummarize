@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
-import DOMPurify from "dompurify";
 import type { SavedRecord, SanitizedTag, TagsResponse } from "@/types";
 import { parseSummaryData } from "@/lib/tags";
+import { preloadDOMPurify, sanitizeSync } from "@/lib/sanitize";
 
 interface UseTagFilterReturn {
   tags: SanitizedTag[];
@@ -22,9 +22,9 @@ function filterItemsByTags(
 ): SavedRecord[] {
   if (selectedTags.length === 0) return items;
 
-  // 入力値をサニタイズ
+  // 入力値をサニタイズ（動的ロード済みのDOMPurifyを使用）
   const sanitizedTags = selectedTags
-    .map((tag) => DOMPurify.sanitize(tag.trim()))
+    .map((tag) => sanitizeSync(tag.trim()))
     .filter(Boolean);
 
   return items.filter((item) => {
@@ -32,7 +32,7 @@ function filterItemsByTags(
     if (!tags || !Array.isArray(tags)) return false;
 
     return sanitizedTags.some((selectedTag) =>
-      tags.some((itemTag) => DOMPurify.sanitize(itemTag) === selectedTag)
+      tags.some((itemTag) => sanitizeSync(itemTag) === selectedTag)
     );
   });
 }
@@ -61,8 +61,9 @@ export function useTagFilter(savedItems: SavedRecord[]): UseTagFilterReturn {
     }
   }, []);
 
-  // 初期ロード
+  // 初期ロード + DOMPurifyプリロード
   useEffect(() => {
+    preloadDOMPurify(); // DOMPurifyを事前ロード（バンドルサイズ最適化）
     fetchTags();
   }, [fetchTags]);
 
@@ -96,7 +97,7 @@ export function useTagFilter(savedItems: SavedRecord[]): UseTagFilterReturn {
     if (!tagsData?.tags) return [];
 
     return tagsData.tags.map((tag) => ({
-      tag: DOMPurify.sanitize(tag.tag),
+      tag: sanitizeSync(tag.tag),
       count: tag.count,
       isSelected: selectedTags.includes(tag.tag),
     }));
