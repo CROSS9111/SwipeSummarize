@@ -13,22 +13,28 @@ export async function GET() {
   try {
     const supabase = await createClient();
 
-    // 要約完了済みURLの件数を取得
-    const { count, error: countError } = await supabase
+    // ステータス別件数を1クエリで取得（ウォーターフォール排除）
+    const { data: statusData, error: statusError } = await supabase
       .from("urls")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "completed");
+      .select("status")
+      .in("status", ["completed", "pending", "processing"]);
 
-    if (countError) throw countError;
+    if (statusError) throw statusError;
 
-    if (!count || count === 0) {
-      // 処理中・待機中のURLがあるか確認
-      const { count: pendingCount } = await supabase
-        .from("urls")
-        .select("*", { count: "exact", head: true })
-        .in("status", ["pending", "processing"]);
+    // ステータス別にカウント
+    const statusCounts = (statusData || []).reduce(
+      (acc, row: { status: string }) => {
+        acc[row.status] = (acc[row.status] || 0) + 1;
+        return acc;
+      },
+      { completed: 0, pending: 0, processing: 0 } as Record<string, number>
+    );
 
-      if (pendingCount && pendingCount > 0) {
+    const completedCount = statusCounts.completed;
+    const pendingCount = statusCounts.pending + statusCounts.processing;
+
+    if (completedCount === 0) {
+      if (pendingCount > 0) {
         return NextResponse.json(
           {
             error: {
@@ -50,6 +56,8 @@ export async function GET() {
         { status: 404 }
       );
     }
+
+    const count = completedCount;
 
     // ランダムなオフセットを計算
     const randomOffset = Math.floor(Math.random() * count);

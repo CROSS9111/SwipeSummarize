@@ -28,10 +28,16 @@ export function SwipeableCard({
     [0.5, 1, 1, 1, 0.5]
   );
 
-  const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+  const handleDragEnd = (
+    event: MouseEvent | TouchEvent | PointerEvent,
+    info: PanInfo
+  ) => {
     const swipeThreshold = 100;
 
-    if (Math.abs(info.offset.x) > swipeThreshold || Math.abs(info.offset.y) > swipeThreshold) {
+    if (
+      Math.abs(info.offset.x) > swipeThreshold ||
+      Math.abs(info.offset.y) > swipeThreshold
+    ) {
       if (info.offset.x > swipeThreshold && onSwipeRight) {
         // 右スワイプ - とっとく
         onSwipeRight();
@@ -65,7 +71,7 @@ export function SwipeableCard({
       animate={{ x: 0, y: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
       whileDrag={{ cursor: "grabbing" }}
-      className="relative"
+      className="relative w-full max-w-2xl"
     >
       {children}
 

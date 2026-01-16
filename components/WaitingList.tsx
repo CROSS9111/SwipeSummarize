@@ -206,17 +206,15 @@ export function WaitingList({ refreshTrigger }: WaitingListProps) {
 
   if (isInitialLoad && isLoading) {
     return (
-      <div className="border rounded-lg p-8">
-        <div className="flex items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
+      <div className="border rounded-lg p-8 min-h-[516px] flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   if (!isInitialLoad && items.length === 0) {
     return (
-      <div className="border rounded-lg p-8">
+      <div className="border rounded-lg p-8 min-h-[516px] flex items-center justify-center">
         <div className="text-center text-muted-foreground">
           <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
           <p>待機中の記事はありません</p>

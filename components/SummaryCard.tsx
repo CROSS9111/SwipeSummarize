@@ -19,7 +19,7 @@ export function SummaryCard({ summary, isLoading }: SummaryCardProps) {
     let tags = summary.tags || [];
 
     // Check if summary is a JSON string
-    if (summary.summary && summary.summary.includes('```json')) {
+    if (summary.summary && summary.summary.includes("```json")) {
       try {
         // Extract JSON from markdown code block
         const jsonMatch = summary.summary.match(/```json\n([\s\S]*?)\n```/);
@@ -32,7 +32,7 @@ export function SummaryCard({ summary, isLoading }: SummaryCardProps) {
         // If parsing fails, use the original text
         console.error("Failed to parse summary JSON:", e);
       }
-    } else if (summary.summary && summary.summary.startsWith('{')) {
+    } else if (summary.summary && summary.summary.startsWith("{")) {
       try {
         // Try direct JSON parse
         const parsed = JSON.parse(summary.summary);
@@ -49,15 +49,24 @@ export function SummaryCard({ summary, isLoading }: SummaryCardProps) {
 
   if (isLoading) {
     return (
-      <Card className="w-full max-w-2xl h-[500px]">
+      <Card className="w-full max-w-2xl h-[500px] flex flex-col">
         <CardHeader>
           <Skeleton className="h-8 w-3/4" />
           <Skeleton className="h-4 w-1/2 mt-2" />
+          <div className="flex gap-4 mt-2">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-4 w-24" />
+          </div>
         </CardHeader>
-        <CardContent>
-          <Skeleton className="h-4 w-full mb-2" />
-          <Skeleton className="h-4 w-full mb-2" />
-          <Skeleton className="h-4 w-3/4" />
+        <CardContent className="flex-1 space-y-4">
+          <Skeleton className="h-6 w-20" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/4" />
+          </div>
         </CardContent>
       </Card>
     );
@@ -65,7 +74,7 @@ export function SummaryCard({ summary, isLoading }: SummaryCardProps) {
 
   if (!summary) {
     return (
-      <Card className="w-full max-w-2xl h-[500px] flex items-center justify-center">
+      <Card className="w-full max-w-2xl h-[500px] flex flex-col items-center justify-center">
         <CardContent className="text-center text-muted-foreground">
           <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
           <p>URLリストが空です</p>

@@ -46,31 +46,54 @@ export default function Home() {
     if (!summary) return;
 
     setIsProcessing(true);
-    try {
-      const response = await fetch("/api/saved", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          url_id: summary.id,
-          title: summary.title,
-          summary: summary.summary,
-          original_url: summary.url,
-          tags: summary.tags || [],
-        }),
-      });
+    const currentSummaryId = summary.id;
 
-      if (!response.ok) {
-        const data = await response.json();
+    // 楽観的UI更新: 即座に現在のカードをクリア
+    setSummary(undefined);
+
+    try {
+      // 保存APIと次の記事取得を並列実行
+      const [saveResponse, nextSummaryResponse] = await Promise.all([
+        fetch("/api/saved", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            url_id: currentSummaryId,
+            title: summary.title,
+            summary: summary.summary,
+            original_url: summary.url,
+            tags: summary.tags || [],
+          }),
+        }),
+        fetch("/api/urls/random"),
+      ]);
+
+      // 保存結果をチェック
+      if (!saveResponse.ok) {
+        const data = await saveResponse.json();
         throw new Error(data.error?.message || "保存に失敗しました");
       }
 
       toast.success("記事を保存しました");
-      await fetchRandomSummary();
+
+      // 次の記事を設定
+      if (nextSummaryResponse.ok) {
+        const nextData = await nextSummaryResponse.json();
+        setSummary(nextData);
+      } else {
+        const errorData = await nextSummaryResponse.json();
+        if (nextSummaryResponse.status === 404) {
+          toast.info(errorData.error?.message || "URLリストが空です");
+        }
+      }
+
       setRefreshTrigger(prev => prev + 1);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "エラーが発生しました");
+      // エラー時は再取得を試みる
+      await fetchRandomSummary();
     } finally {
       setIsProcessing(false);
     }
@@ -80,21 +103,44 @@ export default function Home() {
     if (!summary) return;
 
     setIsProcessing(true);
-    try {
-      const response = await fetch(`/api/urls/${summary.id}`, {
-        method: "DELETE",
-      });
+    const currentSummaryId = summary.id;
 
-      if (!response.ok) {
-        const data = await response.json();
+    // 楽観的UI更新: 即座に現在のカードをクリア
+    setSummary(undefined);
+
+    try {
+      // 削除APIと次の記事取得を並列実行
+      const [deleteResponse, nextSummaryResponse] = await Promise.all([
+        fetch(`/api/urls/${currentSummaryId}`, {
+          method: "DELETE",
+        }),
+        fetch("/api/urls/random"),
+      ]);
+
+      // 削除結果をチェック
+      if (!deleteResponse.ok) {
+        const data = await deleteResponse.json();
         throw new Error(data.error?.message || "削除に失敗しました");
       }
 
       toast.success("記事を削除しました");
-      await fetchRandomSummary();
+
+      // 次の記事を設定
+      if (nextSummaryResponse.ok) {
+        const nextData = await nextSummaryResponse.json();
+        setSummary(nextData);
+      } else {
+        const errorData = await nextSummaryResponse.json();
+        if (nextSummaryResponse.status === 404) {
+          toast.info(errorData.error?.message || "URLリストが空です");
+        }
+      }
+
       setRefreshTrigger(prev => prev + 1);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "エラーが発生しました");
+      // エラー時は再取得を試みる
+      await fetchRandomSummary();
     } finally {
       setIsProcessing(false);
     }
